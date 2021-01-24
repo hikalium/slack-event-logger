@@ -1,0 +1,9 @@
+dst/
+data_*/
+.DS_Store
+node_modules/
+*.swp
+.env
+slack.json
+slack.txt
+*.txt

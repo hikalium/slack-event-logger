@@ -1,0 +1,28 @@
+{
+  "name": "slack-event-logger",
+  "version": "1.0.0",
+  "description": "Log events to Slack",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/hikalium/slack-event-logger.git"
+  },
+  "keywords": [
+    "Slack",
+    "logger",
+    "event"
+  ],
+  "author": "hikalium",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hikalium/slack-event-logger/issues"
+  },
+  "homepage": "https://github.com/hikalium/slack-event-logger#readme",
+  "dependencies": {
+    "@slack/web-api": "^6.0.0",
+    "dotenv": "^8.2.0"
+  }
+}
