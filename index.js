@@ -46,10 +46,19 @@ ${terms.map(s => `
 <button id="btn_${termToKey[s]}"type="button" class="btn btn-primary">
 ${s}
 </button>
+<span></span>
 </p>`).join('\n')}
 </div>
 <script>
 socket = io();
+socket.on('eventInfo', (id, name, recorded_at) => {
+  console.log('eventInfo received: id=' + id + ' name=' + name + ' recorded_at=' + recorded_at);
+  $('#btn_' + id)
+    .removeClass('btn-primary')
+    .addClass('btn-success');
+  $('#btn_' + id + ' + span')
+    .text(recorded_at);
+});
 socket.on('messageSent', (id) => {
   console.log('server notified that message sent: ' + id);
   $('#btn_' + id)
@@ -64,27 +73,47 @@ const buttonHandler = (e) => {
 const buttons = document.querySelectorAll(".btn");
 console.log(buttons);
 buttons.forEach((e) => {e.addEventListener("click", buttonHandler)});
+socket.emit("requestEventInfos");
 </script>
 </body>
     `);
     });
+
+let eventLog = JSON.parse(fs.readFileSync("log.json", "utf-8"));
+// [{name: "", recorded_at: ""}, ...]
+
+const recordEvent = async (s) => {
+  // returns false if succeeded. returns error on failure.
+  // See: https://api.slack.com/methods/chat.postMessage
+  const res = await web.chat.postMessage({channel: channelId, text: s});
+  // `res` contains information about the posted message
+  if (!res.ok) {
+    console.log('API failed: ', res.error);
+    return res.error;
+  }
+
+  eventLog.push({name: s, recorded_at: (new Date()).toISOString()});
+  console.log(eventLog);
+  fs.writeFileSync("log.json", JSON.stringify(eventLog, null, " "));
+  return false;
+};
 
 io.on('connection', (socket) => {
   console.log('a user connected');
   socket.on('disconnect', () => {
     console.log('user disconnected');
   });
+  socket.on('requestEventInfos', () => {
+    for(const e of eventLog) {
+      socket.emit("eventInfo", termToKey[e.name], e.name, e.recorded_at);
+    }
+  });
   socket.on('sendMessage', (s) => {
     console.log('sendMessage');
     (async () => {
-      // See: https://api.slack.com/methods/chat.postMessage
-      const res = await web.chat.postMessage({channel: channelId, text: s});
-      // `res` contains information about the posted message
-      if (!res.ok) {
-        console.log('API failed: ', res.error);
-        return;
-      }
-      console.log('Message sent: ', res.ts);
+      const error = await recordEvent(s);
+      if (error) return;
+      console.log('Message sent.');
       socket.emit('messageSent', termToKey[s]);
     })();
   });
