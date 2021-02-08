@@ -105,6 +105,9 @@ io.on('connection', (socket) => {
   });
   socket.on('requestEventInfos', () => {
     for(const e of eventLog) {
+      if((new Date().getTime()) - (new Date(e.recorded_at)).getTime() > 1000 * 60 * 60 * 12) {
+        continue;
+      }
       socket.emit("eventInfo", termToKey[e.name], e.name, e.recorded_at);
     }
   });
