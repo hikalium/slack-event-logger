@@ -12,21 +12,23 @@ const channelId = process.env.SLACK_CHANNEL_ID;
 
 const web = new WebClient(token);
 
-const terms = JSON.parse(fs.readFileSync('terms.json'));
+const termsData = JSON.parse(fs.readFileSync('terms.json'));
 
 const keyToTerm = {};
 const termToKey = {};
-for (const t of terms) {
-  const key = crypto.createHash('md5').update(t).digest('hex');
-  keyToTerm[key] = t;
-  termToKey[t] = key;
+for (const k in termsData) {
+  const terms = termsData[k];
+  for (const t of terms) {
+    const key = crypto.createHash('md5').update(t).digest('hex');
+    keyToTerm[key] = t;
+    termToKey[t] = key;
+  }
 }
 console.log(keyToTerm);
 console.log(termToKey);
 
-app.get(
-    '/', (req, res) => {
-      res.send(`<!DOCTYPE html>
+app.get('/', (req, res) => {
+  res.send(`<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <title>slack-event-logger</title>
@@ -41,13 +43,16 @@ app.get(
 <body>
 <div class="container">
 <h1>slack-event-logger</h1>
-${terms.map(s => `
+${
+      Object.entries(termsData)
+          .map((e) => {return `<h2>${e[0]}</h2>` + e[1].map(s => `
 <p>
 <button id="btn_${termToKey[s]}"type="button" class="btn btn-primary">
 ${s}
 </button>
 <span></span>
-</p>`).join('\n')}
+</p>`).join('\n')})
+          .join('\n')}
 </div>
 <script>
 socket = io();
@@ -77,9 +82,9 @@ socket.emit("requestEventInfos");
 </script>
 </body>
     `);
-    });
+});
 
-let eventLog = JSON.parse(fs.readFileSync("log.json", "utf-8"));
+let eventLog = JSON.parse(fs.readFileSync('log.json', 'utf-8'));
 // [{name: "", recorded_at: ""}, ...]
 
 const recordEvent = async (s) => {
@@ -94,7 +99,7 @@ const recordEvent = async (s) => {
 
   eventLog.push({name: s, recorded_at: (new Date()).toISOString()});
   console.log(eventLog);
-  fs.writeFileSync("log.json", JSON.stringify(eventLog, null, " "));
+  fs.writeFileSync('log.json', JSON.stringify(eventLog, null, ' '));
   return false;
 };
 
@@ -104,11 +109,12 @@ io.on('connection', (socket) => {
     console.log('user disconnected');
   });
   socket.on('requestEventInfos', () => {
-    for(const e of eventLog) {
-      if((new Date().getTime()) - (new Date(e.recorded_at)).getTime() > 1000 * 60 * 60 * 12) {
+    for (const e of eventLog) {
+      if ((new Date().getTime()) - (new Date(e.recorded_at)).getTime() >
+          1000 * 60 * 60 * 12) {
         continue;
       }
-      socket.emit("eventInfo", termToKey[e.name], e.name, e.recorded_at);
+      socket.emit('eventInfo', termToKey[e.name], e.name, e.recorded_at);
     }
   });
   socket.on('sendMessage', (s) => {
